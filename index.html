@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pronóstico Camino de Acceso</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pronóstico Camino">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 13px; }
+  .page { max-width: 820px; margin: 0 auto; padding: 8px; }
+
+  /* Language switch */
+  .langbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+  .lang { display: inline-flex; border: 1px solid #000; border-radius: 4px; overflow: hidden; }
+  .lang button { border: 0; background: #fff; color: #000; font: bold 13px Arial, sans-serif; padding: 6px 14px; cursor: pointer; }
+  .lang button + button { border-left: 1px solid #000; }
+  .lang button.on { background: #000; color: #fff; }
+
+  /* Title band, like the sheet */
+  .band { display: flex; border: 1px solid #000; }
+  .logo { width: 34%; background: #ccc; display: flex; align-items: center; justify-content: center; padding: 6px; font: 900 20px Arial Black, Arial, sans-serif; letter-spacing: 1px; }
+  .ttl { flex: 1; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; font-size: 17px; padding: 8px; }
+
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 4px 12px; border: 1px solid #000; border-top: 0; padding: 4px 6px; font-size: 12px; }
+  .meta b { font-weight: bold; }
+
+  .bar { background: #ccc; font-weight: bold; text-align: center; border: 1px solid #000; border-top: 0; padding: 3px; }
+  .bar.l { text-align: left; }
+  .gap { height: 10px; }
+  .title { font-weight: bold; text-align: center; font-size: 15px; margin: 14px 0 4px; }
+
+  .riskbox { display: flex; border: 1px solid #000; border-top: 0; min-height: 90px; }
+  .riskbox .lvl { width: 34%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 40px; border-right: 1px solid #000; }
+  .riskbox .lvl.word { font-size: 22px; }
+  .riskbox .dsc { flex: 1; display: flex; align-items: center; padding: 6px 8px; font-weight: bold; font-size: 13px; white-space: pre-line; }
+
+  .trendrow { display: flex; border: 1px solid #000; border-top: 0; font-size: 12px; }
+  .trendrow > div { padding: 3px 6px; border-right: 1px solid #000; display: flex; align-items: center; }
+  .trendrow > div:last-child { border-right: 0; }
+  .trendrow .k { background: #ccc; font-weight: bold; }
+  .trendrow .v { flex: 1; justify-content: center; }
+
+  .attn { color: #e00; font-weight: bold; font-style: italic; text-align: center; font-size: 12px; padding: 3px; }
+
+  .box { border: 1px solid #000; border-top: 0; padding: 6px 8px; min-height: 48px; white-space: pre-wrap; }
+  .box.top { border-top: 1px solid #000; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { border: 1px solid #000; padding: 4px 3px; text-align: center; vertical-align: middle; word-wrap: break-word; overflow-wrap: anywhere; }
+  th { background: #ccc; font-weight: bold; }
+
+  .trend td.rl { background: #000; color: #fff; font-weight: bold; font-size: 16px; width: 34%; }
+  .trend td.v { font-weight: bold; font-size: 22px; height: 56px; }
+  .trend th { text-transform: capitalize; }
+
+  .obs th { font-size: 11px; padding: 3px 2px; overflow-wrap: normal; word-break: normal; }
+  .obs td { font-size: 12px; padding: 4px 2px; height: 28px; }
+  .narrow { display: none; }
+  @media (max-width: 640px) { .wide { display: none; } .narrow { display: table; } div.narrow { display: block; } }
+
+  .wx td:first-child, .wx th:first-child { width: 36%; font-size: 11px; }
+  .wx th { text-transform: capitalize; }
+  .wx td { font-size: 12px; }
+
+  .scale td { font-size: 12px; }
+  .scale td.lv { width: 18%; font-weight: bold; font-size: 20px; }
+  .scale td.lv.word { font-size: 14px; }
+  .scale td.d { width: 30%; font-weight: bold; }
+  .scale td.a { text-align: left; white-space: pre-wrap; }
+
+  footer { text-align: center; color: #666; font-size: 11px; padding: 14px 0 20px; }
+  footer button { font: 11px Arial, sans-serif; border: 1px solid #999; background: #fff; border-radius: 3px; padding: 2px 8px; margin-left: 6px; cursor: pointer; }
+  .loading { text-align: center; padding: 50px 0; color: #666; }
+
+  @media (max-width: 420px) {
+    .ttl { font-size: 14px; } .logo { font-size: 15px; }
+    .riskbox .lvl { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="langbar">
+    <div class="lang" role="group" aria-label="Idioma / Language">
+      <button id="b-es" onclick="setLang('es')">Español</button>
+      <button id="b-en" onclick="setLang('en')">English</button>
+    </div>
+  </div>
+  <div id="app"><div class="loading" id="loading">Cargando…</div></div>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+var T = {
+  es: {
+    title: 'Pronóstico de Avalanchas Camino de Acceso', loading: 'Cargando…',
+    date: 'Fecha:', time: 'Hora de Emisión:', name: 'Nombre:',
+    today: 'NIVEL DE RIESGO DÍA DE HOY', trend: 'Tendencia del Riesgo:', valid: 'Válido Hasta:',
+    noFc: 'Sin Pronóstico',
+    attn: 'ATTE: PRONÓSTICO PUEDE SER ACTUALIZADO EN CUALQUIER MOMENTO',
+    comments: 'COMENTARIOS', trendTitle: 'Tendencia de Riesgo', riskLevel: 'Nivel de Riesgo',
+    trendComments: 'Comentarios', obs: 'Observaciones Diarias la Mesada',
+    obsLabels: ['Hora','Cielo','Precipi&shy;taciones','Altura de Nieve','Nieve Nueva (cm)','Nieve Tormenta (cm)','Lluvia 24 hs. (mm)','Tempe&shy;ratura Actual','Tempe&shy;ratura Max','Tempe&shy;ratura Min','Direc&shy;ción de Viento','Velocidad de Viento'],
+    wx: 'Pronóstico Meteorológico (1700 msnm)',
+    wxLabels: ['Cielo','Nieve (cm)','Lluvia (mm)','Dirección de viento','Velocidad de viento (km/h)','Temperatura Max/Min (C°)','Isoterma 0 (msnm)'],
+    scale: 'ESCALA DE RIESGO CAMINO ACCESO LA MESADA', updated: 'Actualizado', refresh: 'Actualizar',
+    error: 'No se pudo cargar el pronóstico.', offline: 'Sin conexión: mostrando el último pronóstico descargado'
+  },
+  en: {
+    title: 'Avalanche Forecast Access Road', loading: 'Loading…',
+    date: 'Date:', time: 'Time of Forecast:', name: 'Name:',
+    today: "TODAY'S RISK LEVEL", trend: 'Risk Trend:', valid: 'Valid Until:',
+    noFc: 'Forecast Expired',
+    attn: 'ATTENTION: FORECAST MAY BE UPDATED AT ANY TIME',
+    comments: 'COMMENTS', trendTitle: 'Risk Trend', riskLevel: 'Risk Level',
+    trendComments: 'Comments', obs: 'Daily Observations la Mesada',
+    obsLabels: ['Time','Sky','Precipi&shy;tation','Snow Height','New Snow (cm)','Storm Snow (cm)','Rain 24 hr (mm)','Current Temp','Max Temp','Min Temp','Wind Dir','Wind Speed'],
+    wx: 'Weather Forecast (1700 m)',
+    wxLabels: ['Sky','Snow (cm)','Rain (mm)','Wind direction','Wind speed (km/h)','Temperature Max/Min (C°)','Freezing level (m)'],
+    scale: 'LA MESADA ACCESS ROAD RISK SCALE', updated: 'Updated', refresh: 'Refresh',
+    error: 'Could not load the forecast.', offline: 'Offline: showing the last forecast downloaded'
+  }
+};
+
+// Colours copied from the risk scale in the sheet.
+var COLORS = {
+  '0': ['#999999', '#000'], '1': ['#38761d', '#fff'], '2': ['#ffff00', '#000'],
+  '3': ['#ff9900', '#000'], '4': ['#ff0000', '#fff']
+};
+function levelKey(s) {
+  s = String(s || '').trim().toUpperCase();
+  if (s === 'NULO' || s === 'NONE' || s === 'NULL') return '0';
+  var m = s.match(/^[1-4]/);
+  return m ? m[0] : '';
+}
+function colorStyle(level) {
+  var c = COLORS[levelKey(level)];
+  return c ? ' style="background:' + c[0] + ';color:' + c[1] + '"' : '';
+}
+// Text for the box beside today's level: the third column (actions) of the risk scale.
+function actionsFor(d, level) {
+  var k = levelKey(level);
+  for (var i = 0; i < d.scale.length; i++) {
+    if (k !== '' && levelKey(d.scale[i].level) === k) return d.scale[i].actions;
+  }
+  return has(d.levelDesc) ? d.levelDesc : '-';
+}
+function isWord(level) { return levelKey(level) === '0'; }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function has(s) { s = String(s || '').trim(); return s !== '' && s !== '-'; }
+function v(s) { return esc(has(s) ? s : '-'); }
+
+var DATA = null;
+var LANG = (new URLSearchParams(location.search).get('lang') === 'en') ? 'en' : 'es';
+try { var saved = localStorage.getItem('pronosticoLang'); if (saved === 'es' || saved === 'en') LANG = saved; } catch (e) {}
+
+function setLang(l) {
+  LANG = l;
+  try { localStorage.setItem('pronosticoLang', l); } catch (e) {}
+  render();
+}
+
+function render() {
+  var t = T[LANG];
+  document.documentElement.lang = LANG;
+  document.title = t.title;
+  document.getElementById('b-es').className = LANG === 'es' ? 'on' : '';
+  document.getElementById('b-en').className = LANG === 'en' ? 'on' : '';
+  if (!DATA) { var l = document.getElementById('loading'); if (l) l.textContent = t.loading; return; }
+
+  var d = DATA[LANG];
+  var live = has(d.date);
+  var h = '';
+
+  // Title band and details
+  h += '<div class="band"><div class="logo">BAGUALES</div><div class="ttl">' + t.title + '</div></div>';
+  h += '<div class="meta"><span><b>' + t.date + '</b> ' + v(d.date) + '</span>'
+     + '<span><b>' + t.time + '</b> ' + v(d.time) + '</span>'
+     + '<span><b>' + t.name + '</b> ' + v(d.name) + '</span></div>';
+
+  // Today's risk
+  h += '<div class="bar">' + t.today + '</div>';
+  var lvl = live ? d.level : '-';
+  h += '<div class="riskbox"><div class="lvl' + (isWord(lvl) ? ' word' : '') + '"' + colorStyle(lvl) + '>' + v(lvl) + '</div>'
+     + '<div class="dsc">' + esc(live ? actionsFor(d, lvl) : t.noFc) + '</div></div>';
+  h += '<div class="trendrow"><div class="k">' + t.trend + '</div><div class="v">' + v(live ? d.trend : '') + '</div>'
+     + '<div class="k">' + t.valid + '</div><div class="v">' + v(live ? d.validUntil : '') + '</div></div>';
+  h += '<div class="attn">' + t.attn + '</div>';
+
+  // Comments
+  h += '<div class="bar l" style="border-top:1px solid #000">' + t.comments + '</div>';
+  h += '<div class="box">' + v(live ? d.comments : '') + '</div>';
+
+  // Risk trend
+  h += '<div class="title">' + t.trendTitle + '</div>';
+  h += '<table class="trend"><tr><td class="rl" rowspan="2">' + t.riskLevel + '</td>';
+  d.trendDays.forEach(function (x) { h += '<th>' + esc(live ? x.day : '') + '</th>'; });
+  h += '</tr><tr>';
+  d.trendDays.forEach(function (x) {
+    var lv = live ? x.level : '-';
+    h += '<td class="v"' + colorStyle(lv) + '>' + v(lv) + '</td>';
+  });
+  h += '</tr></table>';
+
+  h += '<div class="title">' + t.trendComments + '</div>';
+  h += '<div class="box top">' + v(live ? d.trendComments : '') + '</div>';
+
+  // Daily observations
+  h += '<div class="title">' + t.obs + '</div>';
+  function obsTable(from, to, cls) {
+    var s = '<table class="obs ' + cls + '"><tr>';
+    for (var i = from; i < to; i++) s += '<th>' + t.obsLabels[i] + '</th>';
+    s += '</tr><tr>';
+    for (var j = from; j < to; j++) s += '<td>' + esc(live ? d.obs[j] : '') + '</td>';
+    return s + '</tr></table>';
+  }
+  h += obsTable(0, 12, 'wide');                                         // computers
+  h += obsTable(0, 6, 'narrow') + '<div class="narrow" style="height:6px"></div>' + obsTable(6, 12, 'narrow');  // phones
+
+  // Weather forecast
+  h += '<div class="title">' + t.wx + '</div>';
+  h += '<table class="wx"><tr><th style="background:#fff;border:0"></th>';
+  d.wxDays.forEach(function (x) { h += '<th>' + esc(live ? x : '') + '</th>'; });
+  h += '</tr>';
+  t.wxLabels.forEach(function (lab, i) {
+    var r = live ? (d.wx[i] || []) : [];
+    h += '<tr><td>' + lab + '</td><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td></tr>';
+  });
+  h += '</table>';
+  h += '<div class="gap"></div><div class="box top">' + v(live ? d.wxDiscussion : '') + '</div>';
+
+  // Risk scale
+  h += '<div class="title">' + t.scale + '</div><table class="scale">';
+  d.scale.forEach(function (s) {
+    h += '<tr><td class="lv' + (isWord(s.level) ? ' word' : '') + '"' + colorStyle(s.level) + '>' + esc(s.level) + '</td>'
+       + '<td class="d">' + esc(s.desc) + '</td><td class="a">' + esc(s.actions) + '</td></tr>';
+  });
+  h += '</table>';
+
+  document.getElementById('app').innerHTML = h;
+  document.getElementById('foot').innerHTML = (DATA.offline ? '<b>' + t.offline + '</b><br>' : '') + t.updated + ': ' + esc(DATA.loadedAt)
+    + ' <button onclick="load()">' + t.refresh + '</button>';
+}
+
+// ---- Data: read the two published forecast tabs as CSV ----
+var PUB = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRckSP7KeM23IODwoa4IaFeBsHqRCoiXo9Dp-krbudI6qZxMwM7IDdcqPv9pW-fIi7mHD8MEQGx7g15/pub?single=true&output=csv&gid=';
+var TABS = { es: { gid: '1724057832', scaleFirstRow: 65 }, en: { gid: '1450128190', scaleFirstRow: 54 } };
+
+function parseCSV(text) {
+  var rows = [], row = [], f = '', q = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(f); f = ''; }
+    else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (ch !== '\r') f += ch;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+function readTab(rows, scaleFirstRow) {
+  function c(a1) {
+    var m = a1.match(/^([A-Z])(\d+)$/), r = rows[Number(m[2]) - 1] || [];
+    return String(r[m[1].charCodeAt(0) - 65] || '').trim();
+  }
+  var scale = [];
+  for (var r = scaleFirstRow; r < scaleFirstRow + 5; r++) scale.push({ level: c('C' + r), desc: c('E' + r), actions: c('G' + r) });
+  return {
+    date: c('D7'), time: c('H7'), name: c('L7'),
+    level: c('B10'), levelDesc: c('E10'), trend: c('E11'),
+    validUntil: [c('K11'), c('M11')].filter(Boolean).join(' '),
+    comments: c('B14'),
+    trendDays: ['F', 'I', 'L'].map(function (k) { return { day: c(k + '20'), level: c(k + '21') }; }),
+    trendComments: c('B27'),
+    obsTime: c('B39'),
+    obs: ['C','D','E','F','G','H','I','J','K','L','M','N'].map(function (k) { return c(k + '39'); }),
+    wxDays: [c('F42'), c('H42'), c('K42')],
+    wx: [43, 44, 45, 46, 47, 48, 49].map(function (r) { return [c('F' + r), c('H' + r), c('K' + r)]; }),
+    wxDiscussion: c('B51'),
+    scale: scale
+  };
+}
+
+function fetchTab(key) {
+  return fetch(PUB + TABS[key].gid + '&t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (t) { return readTab(parseCSV(t), TABS[key].scaleFirstRow); });
+}
+
+function stamp() {
+  var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function load() {
+  if (window.SAMPLE) { DATA = window.SAMPLE; render(); return; }
+  Promise.all([fetchTab('es'), fetchTab('en')]).then(function (res) {
+    DATA = { es: res[0], en: res[1], loadedAt: stamp() };
+    try { localStorage.setItem('pronosticoData', JSON.stringify(DATA)); } catch (e) {}
+    render();
+  }).catch(function () {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('pronosticoData')); } catch (e) {}
+    if (saved) { DATA = saved; DATA.offline = true; render(); }
+    else document.getElementById('app').innerHTML = '<div class="loading">' + T[LANG].error + '</div>';
+  });
+}
+
+try { var cached = JSON.parse(localStorage.getItem('pronosticoData')); if (cached) DATA = cached; } catch (e) {}
+render();
+load();
+setInterval(load, 5 * 60 * 1000);       // refresh every 5 minutes
+document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
