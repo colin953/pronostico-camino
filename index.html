@@ -108,7 +108,7 @@ var T = {
     trendComments: 'Comentarios', obs: 'Observaciones Diarias la Mesada',
     obsLabels: ['Hora','Cielo','Precipi&shy;taciones','Altura de Nieve','Nieve Nueva (cm)','Nieve Tormenta (cm)','Lluvia 24 hs. (mm)','Tempe&shy;ratura Actual','Tempe&shy;ratura Max','Tempe&shy;ratura Min','Direc&shy;ción de Viento','Velocidad de Viento'],
     wx: 'Pronóstico Meteorológico (1700 msnm)',
-    wxLabels: ['Cielo','Nieve (cm)','Lluvia (mm)','Dirección de viento','Velocidad de viento (km/h)','Temperatura Max/Min (C°)','Isoterma 0 (msnm)'],
+    wxLabels: ['Cielo','Nieve (cm)','Lluvia (mm)','Dirección de viento','Velocidad de viento','Temperatura Max/Min (C°)','Isoterma 0 (msnm)'],
     scale: 'ESCALA DE RIESGO CAMINO ACCESO LA MESADA', updated: 'Actualizado', refresh: 'Actualizar',
     error: 'No se pudo cargar el pronóstico.', offline: 'Sin conexión: mostrando el último pronóstico descargado'
   },
@@ -122,7 +122,7 @@ var T = {
     trendComments: 'Comments', obs: 'Daily Observations la Mesada',
     obsLabels: ['Time','Sky','Precipi&shy;tation','Snow Height','New Snow (cm)','Storm Snow (cm)','Rain 24 hr (mm)','Current Temp','Max Temp','Min Temp','Wind Dir','Wind Speed'],
     wx: 'Weather Forecast (1700 m)',
-    wxLabels: ['Sky','Snow (cm)','Rain (mm)','Wind direction','Wind speed (km/h)','Temperature Max/Min (C°)','Freezing level (m)'],
+    wxLabels: ['Sky','Snow (cm)','Rain (mm)','Wind direction','Wind speed','Temperature Max/Min (C°)','Freezing level (m)'],
     scale: 'LA MESADA ACCESS ROAD RISK SCALE', updated: 'Updated', refresh: 'Refresh',
     error: 'Could not load the forecast.', offline: 'Offline: showing the last forecast downloaded'
   }
@@ -130,7 +130,7 @@ var T = {
 
 // Colours copied from the risk scale in the sheet.
 var COLORS = {
-  '0': ['#999999', '#000'], '1': ['#38761d', '#fff'], '2': ['#ffff00', '#000'],
+  '0': ['#999999', '#000'], '1': ['#38761d', '#000'], '2': ['#ffff00', '#000'],
   '3': ['#ff9900', '#000'], '4': ['#ff0000', '#fff']
 };
 function levelKey(s) {
@@ -229,7 +229,7 @@ function render() {
 
   // Weather forecast
   h += '<div class="title">' + t.wx + '</div>';
-  h += '<table class="wx"><tr><th style="background:#fff;border:0"></th>';
+  h += '<table class="wx"><tr><th></th>';
   d.wxDays.forEach(function (x) { h += '<th>' + esc(live ? x : '') + '</th>'; });
   h += '</tr>';
   t.wxLabels.forEach(function (lab, i) {
@@ -243,7 +243,7 @@ function render() {
   h += '<div class="title">' + t.scale + '</div><table class="scale">';
   d.scale.forEach(function (s) {
     h += '<tr><td class="lv' + (isWord(s.level) ? ' word' : '') + '"' + colorStyle(s.level) + '>' + esc(s.level) + '</td>'
-       + '<td class="d">' + esc(s.desc) + '</td><td class="a">' + esc(s.actions) + '</td></tr>';
+       + '<td class="a">' + esc(s.actions) + '</td></tr>';   // level + restrictions only; the hazard description is internal
   });
   h += '</table>';
 

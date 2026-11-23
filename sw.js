@@ -1,6 +1,6 @@
 // Keeps the app shell available offline. Forecast data always comes from the network
 // (the page itself keeps the last downloaded forecast for offline use).
-const CACHE = 'pronostico-camino-v1';
+const CACHE = 'pronostico-camino-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
